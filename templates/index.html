@@ -1,76 +1,172 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glances Instances Monitor</title>
+    <title>Traefik Routers Monitor</title>
     <style>
+        :root[data-theme="light"] {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --card-bg: white;
+            --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --primary-color: #007bff;
+            --hover-color: #0056b3;
+        }
+        
+        :root[data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2d2d2d;
+            --card-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            --primary-color: #4a9eff;
+            --hover-color: #6bb0ff;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            background-color: #f5f5f5;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
+
         h1 {
-            color: #333;
+            color: var(--text-color);
             text-align: center;
         }
+
+        .header-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+            margin: 20px 0;
+        }
+
         .instance-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
+
         .instance-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 8px;
             padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: var(--text-color);
         }
+
+        .instance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .router-name {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
         .status {
             display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.9em;
         }
+
         .status.running {
-            background: #dff0d8;
-            color: #3c763d;
+            background: #1b4b2c;
+            color: #4ade80;
         }
+
         .status.stopped {
-            background: #f2dede;
-            color: #a94442;
+            background: #4b1b1b;
+            color: #de4a4a;
         }
-        .refresh-button {
-            display: block;
-            margin: 20px auto;
+
+        .button {
             padding: 10px 20px;
-            background-color: #007bff;
+            background-color: var(--primary-color);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        .refresh-button:hover {
-            background-color: #0056b3;
+
+        .button:hover {
+            background-color: var(--hover-color);
+        }
+
+        #theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
     </style>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function getUrlFromRule(rule) {
+            // Extract the Host portion from the rule
+            const hostMatch = rule.match(/Host\(`([^`]+)`\)/);
+            if (hostMatch && hostMatch[1]) {
+                return `https://${hostMatch[1]}`;
+            }
+            return null;
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            // Add click handlers to cards
+            document.querySelectorAll('.instance-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const rule = card.getAttribute('data-rule');
+                    const url = getUrlFromRule(rule);
+                    if (url) {
+                        window.open(url, '_blank');
+                    }
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
-        <h1>Glances Instances Monitor</h1>
-        <button class="refresh-button" onclick="window.location.reload()">Refresh</button>
+        <h1>Traefik Routers Monitor</h1>
+        <div class="header-controls">
+            <button class="button" onclick="window.location.reload()">Refresh</button>
+            <button class="button" onclick="toggleTheme()" id="theme-toggle">
+                Toggle Theme
+            </button>
+        </div>
         
         <div class="instance-grid">
         {% if instances %}
             {% for instance in instances %}
-            <div class="instance-card">
-                <h3>{{ instance.name }}</h3>
-                <p><strong>Container ID:</strong> {{ instance.container_id }}</p>
+            <div class="instance-card" data-rule="{{ instance.rule }}">
+                <h3 class="router-name">{{ instance.router_name }}</h3>
+                <p><strong>Container:</strong> {{ instance.name }}</p>
+                <p><strong>ID:</strong> {{ instance.container_id }}</p>
                 <p><strong>Rule:</strong> {{ instance.rule }}</p>
                 <p><strong>Status:</strong> 
                     <span class="status {{ instance.status }}">{{ instance.status }}</span>
@@ -79,7 +175,7 @@
             </div>
             {% endfor %}
         {% else %}
-            <p style="text-align: center; grid-column: 1/-1;">No Glances instances found.</p>
+            <p style="text-align: center; grid-column: 1/-1;">No Traefik router rules found.</p>
         {% endif %}
         </div>
     </div>
