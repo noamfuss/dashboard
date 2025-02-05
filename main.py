@@ -68,3 +68,4 @@ if __name__ == '__main__':
     
     # Run Flask app
     serve(app, host=getenv("HOST", '0.0.0.0'), port=getenv("PORT", 5000))
+

@@ -1,0 +1,25 @@
+services:
+  last-dashboard:
+    image: noamfuss/dashboard:latest
+    container_name: last_dashboard
+    restart: unless-stopped
+    environment:
+      - PORT=80
+    networks:
+      - frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 5000:80
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${APP}.entrypoints=websecure # web
+      - traefik.http.routers.${APP}.rule=Host(`${APP}.${DOMAIN}`)
+      - traefik.http.routers.${APP}.tls.certresolver=staging
+      - traefik.http.services.${APP}.loadbalancer.server.scheme=http
+      - traefik.http.routers.${APP}.tls.domains[0].main=${DOMAIN}
+      - traefik.http.routers.${APP}.tls.domains[0].sans=*.${DOMAIN}
+networks:
+  frontend:
+    external: true
+    name: traefic_default
