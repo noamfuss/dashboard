@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-alpine as builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -9,8 +9,10 @@ ENV UV_COMPILE_BYTECODE=1
 COPY requirements.txt .
 RUN uv pip install --system --no-cache -r requirements.txt
 
+FROM python:3.12-alpine
+COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+
 COPY . .
-# Run the FastAPI application by default
-# Uses `fastapi dev` to enable hot-reloading when the `watch` sync occurs
-# Uses `--host 0.0.0.0` to allow access from outside the container
-CMD ["python3", "main.py"]
+
+CMD ["python", "main.py"]
