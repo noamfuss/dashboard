@@ -84,12 +84,12 @@
             font-size: 0.9em;
         }
 
-        .status.running {
+        .status.enabled {
             background: #1b4b2c;
             color: #4ade80;
         }
 
-        .status.stopped {
+        .status.disabled {
             background: #4b1b1b;
             color: #de4a4a;
         }
@@ -164,14 +164,14 @@
         {% if instances %}
             {% for instance in instances %}
             <div class="instance-card" data-rule="{{ instance.rule }}">
-                <h3 class="router-name">{{ instance.router_name }}</h3>
-                <p><strong>Container:</strong> {{ instance.name }}</p>
-                <!-- <p><strong>ID:</strong> {{ instance.container_id }}</p> -->
-                <!-- <p><strong>Rule:</strong> {{ instance.rule }}</p> -->
+                <h3 class="router-name">{{ instance.service }}</h3>
+                <p><strong>Router:</strong> {{ instance.name }}</p>
+                <!-- <p><strong>TLS:</strong> {{ instance.tls }}</p> -->
+                <!-- <p><strong>Entry points:</strong> {{ instance.entryPoints }}</p> -->
                 <p><strong>Status:</strong> 
                     <span class="status {{ instance.status }}">{{ instance.status }}</span>
                 </p>
-                <p><strong>Created:</strong> {{ instance.created }}</p>
+                <!-- <p><strong>Rule:</strong> {{ instance.rule }}</p> -->
             </div>
             {% endfor %}
         {% else %}
@@ -181,3 +181,4 @@
     </div>
 </body>
 </html>
+

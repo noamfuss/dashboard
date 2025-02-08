@@ -5,15 +5,15 @@ services:
     restart: unless-stopped
     environment:
       - PORT=80
+      # - HOST="<host to serve>"
+      - TRAEFIK_API=${TRAEFIK_API}
     networks:
       - frontend
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 5000:80
     labels:
       - traefik.enable=true
-      - traefik.http.routers.${APP}.entrypoints=websecure # web
+      - traefik.http.routers.${APP}.entrypoints=websecure
       - traefik.http.routers.${APP}.rule=Host(`${APP}.${DOMAIN}`)
       - traefik.http.routers.${APP}.tls.certresolver=staging
       - traefik.http.services.${APP}.loadbalancer.server.scheme=http
