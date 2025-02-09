@@ -1,6 +1,6 @@
 services:
   last-dashboard:
-    image: noamfuss/dashboard:latest
+    image: noamfuss/dashboard:go
     container_name: last_dashboard
     restart: unless-stopped
     environment:
