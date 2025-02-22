@@ -1,0 +1,6 @@
+.env
+.venv
+.git
+.mypy_cache
+uv.lock
+__pycache__
