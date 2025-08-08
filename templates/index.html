@@ -113,6 +113,22 @@
             align-items: center;
             gap: 8px;
         }
+
+        /* Added icon styles */
+        .card-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 8px; 
+        }
+        .instance-icon {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.06);
+            padding: 4px;
+        }
     </style>
     <script>
         function toggleTheme() {
@@ -164,8 +180,13 @@
         {% if instances %}
             {% for instance in instances %}
             <div class="instance-card" data-rule="{{ instance.rule }}">
-                <h3 class="router-name">{{ instance.service }}</h3>
-                <p><strong>Router:</strong> {{ instance.name }}</p>
+                <div class="card-header">
+                    <img class="instance-icon" src="{{ instance.icon_url }}" alt="{{ instance.service }} icon" loading="lazy" onerror="this.onerror=null; this.src='/icons/placeholder.svg';">
+                    <div>
+                        <h3 class="router-name">{{ instance.service }}</h3>
+                        <p><strong>Router:</strong> {{ instance.name }}</p>
+                    </div>
+                </div>
                 <!-- <p><strong>TLS:</strong> {{ instance.tls }}</p> -->
                 <!-- <p><strong>Entry points:</strong> {{ instance.entryPoints }}</p> -->
                 <p><strong>Status:</strong> 
