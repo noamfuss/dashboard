@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request, jsonify
 from waitress import serve
 import requests
 from datetime import datetime
@@ -108,6 +108,25 @@ def health():
         return {"status": "unhealthy", "traefik_connected": False, "status_code": response.status_code}, 503
     except requests.exceptions.RequestException as e:
         return {"status": "unhealthy", "traefik_connected": False, "error": str(e)}, 503
+
+@app.route('/resolve-icon', methods=['POST'])
+def resolve_icon():
+    """Resolve the best available icon URL for a router instance quickly.
+    Returns placeholder if the icon is not cached yet. The background worker will fetch it.
+    Body JSON expects: { service, name, rule }
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        instance = {
+            'service': data.get('service', ''),
+            'name': data.get('name', ''),
+            'rule': data.get('rule', ''),
+        }
+        import manage_icons  # local import to avoid cycles in some setups
+        url = manage_icons.get_icon_url_for_instance(instance)
+        return jsonify({ 'url': url })
+    except Exception as e:
+        return jsonify({ 'url': '/icons/placeholder.svg', 'error': str(e) }), 200
 
 if __name__ == '__main__':
     # Test Traefik API connection on startup

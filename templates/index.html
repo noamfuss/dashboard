@@ -148,6 +148,29 @@
             return null;
         }
 
+        async function resolveIconForCard(card) {
+            const svc = card.getAttribute('data-service') || '';
+            const name = card.getAttribute('data-name') || '';
+            const rule = card.getAttribute('data-rule') || '';
+            try {
+                const res = await fetch('/resolve-icon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service: svc, name, rule })
+                });
+                const data = await res.json();
+                const img = card.querySelector('img.instance-icon');
+                if (img && data.url) {
+                    // Only update if changed
+                    if (img.src !== location.origin + data.url) {
+                        img.src = data.url;
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
         // Initialize theme on page load
         document.addEventListener('DOMContentLoaded', () => {
             const savedTheme = localStorage.getItem('theme') || 'light';
@@ -163,6 +186,13 @@
                     }
                 });
             });
+
+            // Resolve icons lazily after first paint
+            requestIdleCallback?.(() => {
+                document.querySelectorAll('.instance-card').forEach(card => resolveIconForCard(card));
+            }) || setTimeout(() => {
+                document.querySelectorAll('.instance-card').forEach(card => resolveIconForCard(card));
+            }, 0);
         });
     </script>
 </head>
@@ -179,7 +209,7 @@
         <div class="instance-grid">
         {% if instances %}
             {% for instance in instances %}
-            <div class="instance-card" data-rule="{{ instance.rule }}">
+            <div class="instance-card" data-rule="{{ instance.rule }}" data-service="{{ instance.service }}" data-name="{{ instance.name }}">
                 <div class="card-header">
                     <img class="instance-icon" src="{{ instance.icon_url }}" alt="{{ instance.service }} icon" loading="lazy" onerror="this.onerror=null; this.src='/icons/placeholder.svg';">
                     <div>
@@ -187,12 +217,9 @@
                         <p><strong>Router:</strong> {{ instance.name }}</p>
                     </div>
                 </div>
-                <!-- <p><strong>TLS:</strong> {{ instance.tls }}</p> -->
-                <!-- <p><strong>Entry points:</strong> {{ instance.entryPoints }}</p> -->
                 <p><strong>Status:</strong> 
                     <span class="status {{ instance.status }}">{{ instance.status }}</span>
                 </p>
-                <!-- <p><strong>Rule:</strong> {{ instance.rule }}</p> -->
             </div>
             {% endfor %}
         {% else %}

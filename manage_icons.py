@@ -4,6 +4,7 @@ import threading
 from typing import List, Optional
 
 import requests
+from queue import Queue
 
 # Directory to cache icons
 ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
@@ -20,6 +21,11 @@ ICON_SOURCES = [
 
 # Placeholder filename (created on demand)
 PLACEHOLDER_NAME = "placeholder.svg"
+
+# Async fetch queue and state
+_FETCH_QUEUE: "Queue[dict]" = Queue()
+_PENDING_KEYS = set()
+_PENDING_LOCK = threading.Lock()
 
 
 def get_icons_dir() -> str:
@@ -170,8 +176,55 @@ def get_icon_filename_for_instance(instance: dict) -> str:
     return _ensure_placeholder()
 
 
+def _job_key(instance: dict) -> str:
+    """Unique-ish key for a fetch job to avoid duplicates."""
+    cands = _candidate_names(instance)
+    return "|".join(cands) or (instance.get("service") or instance.get("name") or "?")
+
+
+def _enqueue_fetch(instance: dict) -> None:
+    """Enqueue an async fetch for this instance if not already queued."""
+    key = _job_key(instance)
+    with _PENDING_LOCK:
+        if key in _PENDING_KEYS:
+            return
+        _PENDING_KEYS.add(key)
+        _FETCH_QUEUE.put((key, instance))
+
+
+def _icon_worker() -> None:
+    """Background worker that resolves and downloads icons for queued instances."""
+    while True:
+        key, inst = _FETCH_QUEUE.get()
+        try:
+            # This will download and cache if needed
+            get_icon_filename_for_instance(inst)
+        except Exception:
+            # Swallow to keep worker alive
+            pass
+        finally:
+            with _PENDING_LOCK:
+                _PENDING_KEYS.discard(key)
+            _FETCH_QUEUE.task_done()
+
+
+# Start a single daemon worker
+_worker_thread = threading.Thread(target=_icon_worker, daemon=True)
+_worker_thread.start()
+
+
 def get_icon_url_for_instance(instance: dict) -> str:
-    """Return the URL path in the Flask app for the icon of the given instance."""
-    filename = get_icon_filename_for_instance(instance)
-    # Flask route will serve from /icons/<filename>
-    return f"/icons/{filename}"
+    """Return a fast icon URL.
+
+    - If a cached icon exists for any candidate, return it.
+    - Otherwise, enqueue an async fetch and return the placeholder immediately.
+    """
+    # Fast path: return first cached candidate if any
+    for cand in _candidate_names(instance):
+        cached = _cached_icon_filename(cand)
+        if cached:
+            return f"/icons/{cached}"
+
+    # Not cached yet: enqueue async fetch and return placeholder
+    _enqueue_fetch(instance)
+    return f"/icons/{_ensure_placeholder()}"
