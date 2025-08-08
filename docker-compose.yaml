@@ -7,6 +7,8 @@ services:
       - PORT=80
       # - HOST="<host to serve>"
       - TRAEFIK_API=${TRAEFIK_API}
+    volumes:
+      - ./icons:/app/icons
     networks:
       - frontend
     ports:

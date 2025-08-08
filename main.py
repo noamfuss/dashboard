@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 from waitress import serve
 import requests
 from datetime import datetime
@@ -7,6 +7,8 @@ import time
 import logging
 import os
 from urllib.parse import urljoin
+from dotenv import load_dotenv
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +18,10 @@ app = Flask(__name__)
 
 # Global variable to store discovered routers
 discovered_routers = []
+
+# Icon management
+import manage_icons
+
 
 def get_traefik_routers():
     """
@@ -43,14 +49,17 @@ def get_traefik_routers():
                         # print(f"{router = }")
                         continue
                         
-                    routers.append({
+                    info = {
                         'name': router.get('name', 'unknown'),
                         'rule': router.get('rule', ''),
                         'service': router.get('service', ''),
                         'status': 'enabled' if router.get('status', 'disabled') == 'enabled' else 'disabled',
                         'entryPoints': router.get('entryPoints', []),
                         'tls': 'Yes' if router.get('tls', False) else 'No'
-                    })
+                    }
+                    # Attach icon URL (downloads on first access and caches)
+                    info['icon_url'] = manage_icons.get_icon_url_for_instance(info)
+                    routers.append(info)
             # logger.info(f"Found {len(routers)} HTTP routers")
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching HTTP routers: {e}")
@@ -73,7 +82,14 @@ def background_scanner():
 
 @app.route('/')
 def home():
+    get_traefik_routers()  # Ensure routers are fetched on first access
     return render_template('index.html', instances=discovered_routers)
+
+
+@app.route('/icons/<path:filename>')
+def serve_icon(filename: str):
+    """Serve cached icons from the local icons directory."""
+    return send_from_directory(manage_icons.get_icons_dir(), filename)
 
 
 @app.route('/health')
